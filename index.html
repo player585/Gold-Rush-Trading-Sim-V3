@@ -795,6 +795,7 @@ const BREAKING_EVENTS=[
 ];
 let newsImpact={fXAU:0,fXAG:0,BTC:0};
 let newsTimer=0;
+let cashoutReminderTimer=0;
 
 function initTicker(){
   const el=document.getElementById('ticker-inner');
@@ -824,6 +825,25 @@ function triggerBreaking(){
       setTimeout(()=>{overlay.style.display='none'},3000);
     }
   },1000);
+}
+
+function showCashoutReminder(){
+  const overlay=document.getElementById('breaking-overlay');
+  if(overlay.style.display==='block')return; // don't interrupt a real breaking event
+  const msgs=[
+    '💰 CASHOUT or GET LIQUIDATED for your points to appear on the leaderboard!',
+    '🏆 CASHOUT or GET LIQUIDATED — only way your points count on the leaderboard!',
+    '📢 REMINDER: CASHOUT or GET LIQUIDATED to lock in your leaderboard points!',
+    '🔥 Points don\'t count until you CASHOUT or GET LIQUIDATED — hit the board!'
+  ];
+  const msg=msgs[Math.floor(Math.random()*msgs.length)];
+  overlay.textContent=msg;
+  overlay.style.display='block';
+  overlay.style.animation='none';
+  overlay.offsetHeight;
+  overlay.style.animation='breakFlash .3s ease 3';
+  playSound('alert');
+  setTimeout(()=>{overlay.style.display='none'},4000);
 }
 
 /* ===================== SOUND ===================== */
@@ -993,6 +1013,9 @@ function tickPrices(){
   // News events
   newsTimer++;
   if(newsTimer>150+Math.random()*300){newsTimer=0;triggerBreaking()}
+  // Periodic cashout/leaderboard reminder
+  cashoutReminderTimer++;
+  if(cashoutReminderTimer>600+Math.random()*400){cashoutReminderTimer=0;showCashoutReminder()}
   // Update UI
   updateUI();
   checkChallenges();
