@@ -795,7 +795,7 @@ function closeTrade(posId, isLiq=false){
   const notional=pos.margin*pos.leverage;
   const priceDelta=(price-pos.entry)/pos.entry;
   let pnl=notional*(pos.dir==='long'?priceDelta:-priceDelta);
-  if(isLiq) pnl=-pos.margin*0.95;
+  if(isLiq) pnl=-pos.margin;
   const returnAmt=pos.margin+pnl;
   balance+=Math.max(0,returnAmt);
   totalPnl+=pnl;
