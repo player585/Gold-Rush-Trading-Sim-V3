@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>Gold Rush V3 — Trading Simulator</title>
 <meta name="x-ogp-key" content="00ade5fd-f5fe-4b3f-b172-e6ddd6b19bfe" id="ogp-key-meta"/>
-<script src="https://sdk.play.fun"></script>
+<script src="https://js.play.fun/ogp-sdk.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -158,6 +158,17 @@ input:focus{border-color:var(--tv-blue)}
 .confetti-piece{position:fixed;width:8px;height:8px;z-index:160;pointer-events:none;animation:confettiFall 2s ease forwards}
 @keyframes confettiFall{0%{opacity:1;transform:translateY(0) rotate(0deg)}100%{opacity:0;transform:translateY(100vh) rotate(720deg)}}
 
+/* SHARE & BUY TOKEN BUTTONS */
+#share-btn{background:linear-gradient(135deg,#f0b90b,#e6a800);color:#000;padding:4px 10px;font-size:11px;font-weight:800;border-radius:4px;letter-spacing:0.5px;cursor:pointer;white-space:nowrap}
+#share-btn:hover{filter:brightness(1.15);transform:scale(1.03)}
+#buy-token-btn{background:linear-gradient(135deg,#26a69a,#00897b);color:#fff;padding:4px 10px;font-size:10px;font-weight:800;border-radius:4px;letter-spacing:0.5px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:tokenPulse 3s ease infinite;white-space:nowrap}
+@keyframes tokenPulse{0%,100%{box-shadow:0 0 4px rgba(38,166,154,0.3)}50%{box-shadow:0 0 12px rgba(38,166,154,0.6)}}
+#buy-token-btn:hover{filter:brightness(1.2);transform:scale(1.05)}
+/* SOCIAL PROOF FEED */
+#social-feed{position:fixed;bottom:8px;left:8px;z-index:50;display:flex;flex-direction:column;gap:4px;pointer-events:none;max-width:260px}
+.social-notif{background:rgba(30,34,45,0.92);border:1px solid var(--tv-border);border-radius:6px;padding:6px 10px;font-size:10px;font-family:var(--font-mono);color:var(--tv-dim);animation:socialSlide 0.3s ease,socialFade 0.5s ease 4.5s forwards;backdrop-filter:blur(4px)}
+@keyframes socialSlide{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes socialFade{to{opacity:0;transform:translateX(-10px)}}
 /* HELP MODAL */
 #help-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;justify-content:center;align-items:center;z-index:250}
 #help-modal .inner{background:var(--tv-panel);border:1px solid var(--tv-border);border-radius:8px;padding:20px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto}
@@ -168,6 +179,7 @@ input:focus{border-color:var(--tv-blue)}
 </head>
 <body>
 <canvas id="particles-canvas"></canvas>
+<div id="social-feed"></div>
 <div id="app">
 <!-- NEWS TICKER -->
 <div id="news-bar"><div class="ticker" id="ticker-inner"></div></div>
@@ -199,6 +211,8 @@ input:focus{border-color:var(--tv-blue)}
 <span>Bal: <b id="balance-val">$1,000.00</b></span>
 <span id="pnl-val">P&L: $0.00</span>
 </div>
+<button id="share-btn" onclick="shareViral()">📢 SHARE</button>
+<a id="buy-token-btn" href="https://play.fun/s/7i85e7w" target="_blank" rel="noopener noreferrer">🪙 BUY TOKEN</a>
 <span id="session-timer">00:00</span>
 <button class="top-btn" id="btn-mute" onclick="toggleMute()" title="Mute (M)">🔊</button>
 <button class="top-btn" onclick="showHelp()" title="Help (?)">❓</button>
@@ -275,8 +289,12 @@ input:focus{border-color:var(--tv-blue)}
 <div id="game-over-overlay">
 <div class="grade" id="go-grade">F</div>
 <div class="stats" id="go-stats"></div>
-<button onclick="shareScore()">📋 SHARE SCORE</button>
-<button onclick="location.reload()">🔄 PLAY AGAIN</button>
+<div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+<button onclick="shareScore()" style="background:linear-gradient(135deg,#f0b90b,#e6a800);color:#000;font-size:15px;padding:10px 28px">📢 SHARE SCORE</button>
+<button onclick="location.reload()" style="background:var(--tv-green);font-size:15px;padding:10px 28px">🔄 PLAY AGAIN</button>
+</div>
+<a href="https://play.fun/s/7i85e7w" target="_blank" rel="noopener noreferrer" style="color:#f0b90b;font-size:13px;text-decoration:underline;margin-top:6px;cursor:pointer">🪙 Buy $GOLDRUSH Token → Support the game!</a>
+<div style="font-size:11px;color:var(--tv-dim);margin-top:4px">Your points earn token rewards! Keep playing to climb the leaderboard 🏆</div>
 </div>
 <div id="help-modal" onclick="hideHelp()">
 <div class="inner" onclick="event.stopPropagation()">
@@ -664,6 +682,7 @@ initParticles();drawParticles();
 /* ===================== PRICE ENGINE ===================== */
 function tickPrices(){
   sessionTicks++;
+  if(sessionTicks > 0 && sessionTicks % (60 * (1000/TICK_MS)) === 0 && !gameOver) addPts(3); // activity bonus every ~60s
   for(let sym in MARKETS){
     const M=MARKETS[sym], md=marketData[sym];
     // Skip simulated price for live markets (BTC) — price comes from WebSocket
@@ -761,6 +780,8 @@ function openTrade(dir){
   if(positions.filter(p=>!p.settled).length>=5)unlockAch('hedge_fund');
   renderPositions();
   updateUI();
+  addPts(2); // points for opening a trade
+  lastTradeTime = Date.now();
 }
 
 function closeTrade(posId, isLiq=false){
@@ -778,6 +799,9 @@ function closeTrade(posId, isLiq=false){
   balance+=Math.max(0,returnAmt);
   totalPnl+=pnl;
   totalTrades++;
+  if(totalTrades === 25) setTimeout(()=>showFloat('🔥 25 trades! Keep going!','#f0b90b',window.innerWidth/2,window.innerHeight/2), 500);
+  if(totalTrades === 50) setTimeout(()=>showFloat('⚡ 50 trades! You\'re on fire!','#e040fb',window.innerWidth/2,window.innerHeight/2), 500);
+  if(totalTrades === 100) setTimeout(()=>showFloat('🏆 100 trades! LEGEND!','#f0b90b',window.innerWidth/2,window.innerHeight/2), 500);
   if(pos.sym==='fXAU')goldTradeCount++;
   if(pos.sym==='fXAG')silverTradeCount++;
   // Silver consecutive tracking
@@ -790,6 +814,9 @@ function closeTrade(posId, isLiq=false){
   // Streak system
   updateStreak();
   // Apply streak multiplier to points
+  addPts(5); // points for every trade (win or lose)
+  const holdTime = (Date.now() - pos.openTime) / 1000;
+  if(holdTime < 10) addPts(10); // speed trade bonus
   const basePts=Math.max(0,Math.floor(pnl));
   if(basePts>0) addPts(basePts*streakMultiplier);
   // VFX
@@ -798,6 +825,9 @@ function closeTrade(posId, isLiq=false){
     unlockAch('liq_survivor');
   } else if(isWin){
     playSound('win');flashScreen('rgba(38,166,154,0.3)');
+    if(pnl > 200){
+      setTimeout(()=>showFloat('🪙 Points → Token Rewards!','#f0b90b',window.innerWidth/2,window.innerHeight/2+40), 800);
+    }
   } else {
     playSound('loss');flashScreen('rgba(239,83,80,0.3)');
   }
@@ -1628,6 +1658,13 @@ function shareScore(){
   showFloat('📋 Copied!','#26a69a',window.innerWidth/2,window.innerHeight/2);
 }
 
+function shareViral(){
+  const msg = `⛏ I'm playing Gold Rush V3 on @playdotfun!\n\n💰 Balance: $${balance.toFixed(0)} | ${totalTrades} trades | ${wins} wins\n🔥 ${winStreak > 0 ? winStreak + ' win streak!' : 'Can you beat me?'}\n\n🎮 Play free & earn rewards 👇\nhttps://play.fun/s/7i85e7w`;
+  navigator.clipboard.writeText(msg).catch(()=>{});
+  showFloat('📋 Copied to clipboard!','#f0b90b',window.innerWidth/2,window.innerHeight/2);
+  addPts(5); // reward sharing
+}
+
 /* ===================== KEYBOARD SHORTCUTS ===================== */
 document.addEventListener('keydown',e=>{
   if(e.target.tagName==='INPUT')return;
@@ -1702,8 +1739,53 @@ function initBTCFeed(){
   setInterval(fetchBTCCoinbase, 3000);
 }
 
+/* ===================== SOCIAL PROOF FEED ===================== */
+const FAKE_NAMES = ['CryptoKing','DiamondHands','MoonShot','DegenTrader','WhaleAlert','GoldFinger','BullRunner','DumpIt','PumpMaster','LiqHunter','APEin','TokenBro','SolanaMax','LamboSoon','10xOrNothing','RugPullSurvivor','SendIt','WenMoon','PaperHands','YOLOtrader'];
+const SOCIAL_MSGS = [
+  (n,v)=>`🟢 ${n} opened a $${v} LONG`,
+  (n,v)=>`🔴 ${n} opened a $${v} SHORT`,
+  (n,v)=>`💰 ${n} closed +$${v} profit!`,
+  (n,v)=>`🔥 ${n} hit a ${v}-win streak!`,
+  (n,v)=>`🏆 ${n} reached $${v} balance`,
+  (n,v)=>`⚡ ${n} used ${v}x leverage!`,
+  (n,v)=>`💎 ${n} unlocked an achievement!`,
+  (n,v)=>`🪙 ${n} just bought the token!`,
+];
+function showSocialNotif(){
+  if(gameOver) return;
+  const feed = document.getElementById('social-feed');
+  if(!feed) return;
+  const name = FAKE_NAMES[Math.floor(Math.random()*FAKE_NAMES.length)];
+  const msgFn = SOCIAL_MSGS[Math.floor(Math.random()*SOCIAL_MSGS.length)];
+  const vals = [Math.floor(Math.random()*400+50), Math.floor(Math.random()*8+3), Math.floor(Math.random()*5000+1000), Math.floor(Math.random()*50+10)];
+  const val = vals[Math.floor(Math.random()*vals.length)];
+  const div = document.createElement('div');
+  div.className = 'social-notif';
+  div.textContent = msgFn(name, val);
+  feed.appendChild(div);
+  // Keep max 3 visible
+  while(feed.children.length > 3) feed.removeChild(feed.firstChild);
+  // Auto-remove after 5s
+  setTimeout(()=>{ if(div.parentNode) div.remove(); }, 5000);
+}
+// Show social notifs on a fixed interval
+setInterval(showSocialNotif, 10000);
+// Also show one shortly after load
+setTimeout(showSocialNotif, 3000);
+
+/* ===================== IDLE ENGAGEMENT REMINDER ===================== */
+let lastTradeTime = Date.now();
+setInterval(()=>{
+  if(gameOver) return;
+  const idle = (Date.now() - lastTradeTime) / 1000;
+  if(idle > 30 && idle < 32){
+    showFloat('📈 Markets are moving! Trade now!','#2962ff',window.innerWidth/2,window.innerHeight/3);
+  }
+}, 5000);
+
 /* ===================== INIT ===================== */
 function init(){
+
   initTicker();
   initChallenges();
   // initBTCFeed(); // BTC locked — coming soon
