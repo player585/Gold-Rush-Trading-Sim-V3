@@ -68,7 +68,7 @@ input:focus{border-color:var(--tv-blue)}
 /* BOTTOM PANELS */
 #bottom{flex-shrink:0;height:calc(100vh - 50px - 26px - 42px - 56vh);overflow-y:auto;background:var(--tv-panel)}
 /* CONTROLS */
-#controls{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--tv-border);flex-wrap:wrap}
+#controls{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--tv-border);flex-wrap:wrap;justify-content:space-between}
 #controls label{font-size:11px;color:var(--tv-dim)}
 #controls .grp{display:flex;align-items:center;gap:4px}
 .ctrl-btn{padding:4px 10px;border-radius:3px;font-size:12px;font-weight:600;background:var(--tv-border);color:var(--tv-text)}
@@ -236,16 +236,26 @@ input:focus{border-color:var(--tv-blue)}
 <div id="bottom">
 <!-- CONTROLS -->
 <div id="controls">
-<div class="grp">
-<label>Margin $</label>
-<input id="inp-size" type="number" value="100" min="0.01" step="0.01"/>
-<button class="ctrl-btn" id="btn-max-size" onclick="setMaxSize()">MAX</button>
-</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
 <div class="grp">
 <label>TF</label>
 <button class="tf-btn active" data-tf="5" onclick="setTimeframe(5)">1s</button>
 <button class="tf-btn" data-tf="30" onclick="setTimeframe(30)">6s</button>
 <button class="tf-btn" data-tf="150" onclick="setTimeframe(150)">30s</button>
+</div>
+<div class="grp">
+<label>TP $</label><input id="inp-tp" type="number" placeholder="—" step="0.01"/>
+<label>SL $</label><input id="inp-sl" type="number" placeholder="—" step="0.01"/>
+</div>
+<button id="btn-quick-long" onclick="quickTrade('long')">Quick Long</button>
+<button id="btn-quick-short" onclick="quickTrade('short')">Quick Short</button>
+<button id="btn-close-all" onclick="closeAll()">CLOSE ALL</button>
+</div>
+<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+<div class="grp">
+<label>Margin $</label>
+<input id="inp-size" type="number" value="1000" min="0.01" step="0.01" style="width:90px;font-size:14px;padding:5px 8px"/>
+<button class="ctrl-btn" id="btn-max-size" onclick="setMaxSize()">MAX</button>
 </div>
 <div class="grp">
 <label>Leverage</label>
@@ -255,13 +265,7 @@ input:focus{border-color:var(--tv-blue)}
 </div>
 <span id="lev-limit"><span style="color:#ff1744">50-100x: <b>3</b>/3</span><span style="color:#363c4e"> | </span><span style="color:#ff9800">25-49x: <b>3</b>/3</span><span style="color:#363c4e"> | </span><span style="color:#f7c948">10-24x: <b>3</b>/3</span></span>
 </div>
-<div class="grp">
-<label>TP $</label><input id="inp-tp" type="number" placeholder="—" step="0.01"/>
-<label>SL $</label><input id="inp-sl" type="number" placeholder="—" step="0.01"/>
 </div>
-<button id="btn-quick-long" onclick="quickTrade('long')">Quick Long</button>
-<button id="btn-quick-short" onclick="quickTrade('short')">Quick Short</button>
-<button id="btn-close-all" onclick="closeAll()">CLOSE ALL</button>
 </div>
 <div id="trade-btn-row">
 <button id="btn-long" onclick="openTrade('long')">LONG ▲</button>
@@ -302,9 +306,7 @@ input:focus{border-color:var(--tv-blue)}
 <h3>⌨️ Keyboard Shortcuts</h3>
 <div class="row"><span>Open Long</span><span class="key">L</span></div>
 <div class="row"><span>Open Short</span><span class="key">S</span></div>
-<div class="row"><span>Size $100</span><span class="key">1</span></div>
-<div class="row"><span>Size $250</span><span class="key">2</span></div>
-<div class="row"><span>Size $500</span><span class="key">3</span></div>
+<div class="row"><span>Size $1K/$2.5K/$5K</span><span class="key">1/2/3</span></div>
 <div class="row"><span>Close All</span><span class="key">Esc</span></div>
 <div class="row"><span>Mute</span><span class="key">M</span></div>
 <div class="row"><span>Achievements</span><span class="key">A</span></div>
@@ -398,6 +400,10 @@ let streakMultiplier=1;
 let recentTradeTimestamps=[];
 let maxDrawdownHeld={};
 let unlockedAch=new Set();
+let speedTradeCount=0; // trades closed under 10 sec
+let liqCount=0; // liquidation count
+let lastTradeCloseTime=0; // for revenge trader
+let winLevs=new Set(); // leverages that had wins
 
 // Per-market data
 let marketData={};
@@ -415,26 +421,35 @@ for(let k in MARKETS){
 
 /* ===================== ACHIEVEMENTS ===================== */
 const ACHIEVEMENTS=[
-  {id:'first_blood',name:'First Blood',desc:'Complete your first trade',icon:'🩸',pts:5},
-  {id:'diamond_hands',name:'Diamond Hands',desc:'Hold through 5%+ drawdown and profit',icon:'💎',pts:20},
-  {id:'paper_hands',name:'Paper Hands',desc:'Close a trade within 3 seconds',icon:'🧻',pts:5},
-  {id:'degen',name:'Degen',desc:'Use 50x leverage',icon:'🎰',pts:10},
-  {id:'streak_king',name:'Streak King',desc:'Win 5 trades in a row',icon:'👑',pts:25},
-  {id:'streak_breaker',name:'Streak Breaker',desc:'Lose 5 trades in a row',icon:'💀',pts:10},
-  {id:'comeback_kid',name:'Comeback Kid',desc:'Recover from <$200 to >$1,500',icon:'🔥',pts:30},
-  {id:'double_up',name:'Double Up',desc:'Reach $2,000 balance',icon:'✌️',pts:15},
-  {id:'six_figures',name:'Six Figures',desc:'Reach $10,000 balance',icon:'💰',pts:30},
-  {id:'millionaire',name:'Millionaire',desc:'Reach $100,000 balance',icon:'🤑',pts:50},
-  {id:'liq_survivor',name:'Liquidation Survivor',desc:'Get liquidated but survive',icon:'☠️',pts:15},
-  {id:'both_sides',name:'Both Sides',desc:'Long AND short open simultaneously',icon:'⚖️',pts:10},
-  {id:'speed_trader',name:'Speed Trader',desc:'10 trades in 60 seconds',icon:'⚡',pts:15},
-  {id:'patient_trader',name:'Patient Trader',desc:'Hold a position 200+ ticks',icon:'🧘',pts:20},
-  {id:'max_pain',name:'Max Pain',desc:'Lose $500 on a single trade',icon:'😭',pts:10},
-  {id:'big_winner',name:'Big Winner',desc:'Make $1,000 on a single trade',icon:'🎉',pts:25},
-  {id:'gold_bug',name:'Gold Bug',desc:'20 trades on gold',icon:'🪲',pts:10},
-  {id:'silver_surfer',name:'Silver Surfer',desc:'20 trades on silver',icon:'🏄',pts:10},
-  {id:'all_in',name:'All In',desc:'Use MAX size button',icon:'🎲',pts:5},
-  {id:'hedge_fund',name:'Hedge Fund',desc:'5+ positions open at once',icon:'🏦',pts:15}
+  {id:'first_blood',name:'First Blood',desc:'Complete your first trade',icon:'🩸',pts:50},
+  {id:'diamond_hands',name:'Diamond Hands',desc:'Hold through 5%+ drawdown and profit',icon:'💎',pts:200},
+  {id:'paper_hands',name:'Paper Hands',desc:'Close a trade within 3 seconds',icon:'🧻',pts:50},
+  {id:'degen',name:'Degen',desc:'Use 50x leverage',icon:'🎰',pts:100},
+  {id:'streak_king',name:'Streak King',desc:'Win 5 trades in a row',icon:'👑',pts:250},
+  {id:'streak_breaker',name:'Streak Breaker',desc:'Lose 5 trades in a row',icon:'💀',pts:100},
+  {id:'comeback_kid',name:'Comeback Kid',desc:'Recover from <$2,000 to >$15,000',icon:'🔥',pts:300},
+  {id:'double_up',name:'Double Up',desc:'Reach $20,000 balance',icon:'✌️',pts:150},
+  {id:'six_figures',name:'Six Figures',desc:'Reach $100,000 balance',icon:'💰',pts:300},
+  {id:'millionaire',name:'Millionaire',desc:'Reach $1,000,000 balance',icon:'🤑',pts:500},
+  {id:'liq_survivor',name:'Liquidation Survivor',desc:'Get liquidated but survive',icon:'☠️',pts:150},
+  {id:'both_sides',name:'Both Sides',desc:'Long AND short open simultaneously',icon:'⚖️',pts:100},
+  {id:'speed_trader',name:'Speed Trader',desc:'10 trades in 60 seconds',icon:'⚡',pts:150},
+  {id:'patient_trader',name:'Patient Trader',desc:'Hold a position 200+ ticks',icon:'🧘',pts:200},
+  {id:'max_pain',name:'Max Pain',desc:'Lose $5,000 on a single trade',icon:'😭',pts:100},
+  {id:'big_winner',name:'Big Winner',desc:'Make $10,000 on a single trade',icon:'🎉',pts:250},
+  {id:'gold_bug',name:'Gold Bug',desc:'20 trades on gold',icon:'🪲',pts:100},
+  {id:'silver_surfer',name:'Silver Surfer',desc:'20 trades on silver',icon:'🏄',pts:100},
+  {id:'all_in',name:'All In',desc:'Use MAX size button',icon:'🎲',pts:50},
+  {id:'hedge_fund',name:'Hedge Fund',desc:'5+ positions open at once',icon:'🏦',pts:150},
+  {id:'scalper',name:'Scalper',desc:'Close 5 trades in under 10 seconds each',icon:'🔪',pts:150},
+  {id:'iron_hands',name:'Iron Hands',desc:'Hold through 10%+ drawdown and profit',icon:'🦾',pts:250},
+  {id:'revenge_trader',name:'Revenge Trader',desc:'Open a trade within 3 sec of a loss',icon:'😡',pts:100},
+  {id:'full_send',name:'Full Send',desc:'Use MAX + 100x leverage',icon:'🚀',pts:200},
+  {id:'survivor',name:'Survivor',desc:'Survive 10 minutes',icon:'🏅',pts:150},
+  {id:'triple_threat',name:'Triple Threat',desc:'Win 3 trades on 3 different leverages',icon:'🎯',pts:200},
+  {id:'half_mil',name:'Half Million',desc:'Reach $500,000 balance',icon:'💵',pts:400},
+  {id:'wrecked',name:'Absolutely Wrecked',desc:'Get liquidated 3 times',icon:'💥',pts:100},
+  {id:'grinder',name:'Grinder',desc:'Complete 50 trades',icon:'⚙️',pts:200}
 ];
 
 function unlockAch(id){
@@ -454,16 +469,23 @@ function checkAchievements(tradePnl, tradeObj){
     const dur=(sessionTicks - tradeObj.openTick)*TICK_MS/1000;
     if(dur<3) unlockAch('paper_hands');
     if(dur>=200*TICK_MS/1000) unlockAch('patient_trader');
-    if(tradePnl<=-500) unlockAch('max_pain');
-    if(tradePnl>=1000) unlockAch('big_winner');
+    if(tradePnl<=-5000) unlockAch('max_pain');
+    if(tradePnl>=10000) unlockAch('big_winner');
     const dd=maxDrawdownHeld[tradeObj.id]||0;
     if(dd>=5 && tradePnl>0) unlockAch('diamond_hands');
+    if(dd>=10 && tradePnl>0) unlockAch('iron_hands');
+    if(dur<10) speedTradeCount++;
+    if(speedTradeCount>=5) unlockAch('scalper');
+    if(tradePnl>0) winLevs.add(tradeObj.leverage);
+    if(winLevs.size>=3) unlockAch('triple_threat');
+    if(tradeObj._isLiq){ liqCount++; if(liqCount>=3) unlockAch('wrecked'); }
+    lastTradeCloseTime=Date.now();
   }
   if(winStreak>=5) unlockAch('streak_king');
   if(loseStreak>=5) unlockAch('streak_breaker');
-  if(balance>=2000) unlockAch('double_up');
-  if(balance>=10000) unlockAch('six_figures');
-  if(balance>=100000) unlockAch('millionaire');
+  if(balance>=20000) unlockAch('double_up');
+  if(balance>=100000) unlockAch('six_figures');
+  if(balance>=1000000) unlockAch('millionaire');
   if(goldTradeCount>=20) unlockAch('gold_bug');
   if(silverTradeCount>=20) unlockAch('silver_surfer');
   const dirs=new Set(positions.map(p=>p.dir));
@@ -473,25 +495,29 @@ function checkAchievements(tradePnl, tradeObj){
   recentTradeTimestamps.push(now);
   recentTradeTimestamps=recentTradeTimestamps.filter(t=>now-t<60000);
   if(recentTradeTimestamps.length>=10) unlockAch('speed_trader');
+  if(totalTrades>=50) unlockAch('grinder');
+  if(balance>=500000) unlockAch('half_mil');
+  const elapsed=(Date.now()-sessionStartTime)/1000;
+  if(elapsed>=600) unlockAch('survivor');
 }
 
 /* ===================== CHALLENGES ===================== */
 let activeChallenges=[];
 function initChallenges(){
   const pool=[
-    {id:'profit5k50',desc:'Make $500 profit in under 50 trades',check:()=>{let d=totalPnl>=500&&totalTrades<=50,f=totalTrades>50&&totalPnl<500;return{progress:Math.min(Math.max(totalPnl,0),500),target:500,done:d,failed:f}}},
+    {id:'profit5k50',desc:'Make $5,000 profit in under 50 trades',check:()=>{let d=totalPnl>=5000&&totalTrades<=50,f=totalTrades>50&&totalPnl<5000;return{progress:Math.min(Math.max(totalPnl,0),5000),target:5000,done:d,failed:f}}},
     {id:'win3row',desc:'Win 3 trades in a row',check:()=>({progress:Math.min(winStreak,3),target:3,done:winStreak>=3})},
     {id:'silver10',desc:'Trade only silver for 10 consecutive trades',check:()=>({progress:Math.min(onlySilverConsec,10),target:10,done:onlySilverConsec>=10})},
     {id:'survive100_50x',desc:'Survive 100 ticks with 50x leverage open',check:()=>{let p=positions.find(p=>p.leverage>=50);let t=p?(sessionTicks-p.openTick):0;return{progress:Math.min(t,100),target:100,done:t>=100}}},
     {id:'short5profit',desc:'Profit on 5 short trades',check:()=>{let c=onlyShortTrades.filter(t=>t>0).length;return{progress:Math.min(c,5),target:5,done:c>=5}}},
-    {id:'reach25k_low_lev',desc:'Reach $2,500 without leverage above 5x',check:()=>({progress:lowLevViolated?0:Math.max(0,Math.min(balance-START_BAL,1500)),target:1500,done:!lowLevViolated&&balance>=2500})},
+    {id:'reach25k_low_lev',desc:'Reach $25,000 without leverage above 5x',check:()=>({progress:lowLevViolated?0:Math.max(0,Math.min(balance-START_BAL,15000)),target:15000,done:!lowLevViolated&&balance>=25000})},
     {id:'win5row',desc:'Win 5 trades in a row',check:()=>({progress:Math.min(winStreak,5),target:5,done:winStreak>=5})},
-    {id:'make10k',desc:'Make $1,000 total profit',check:()=>({progress:Math.max(0,Math.min(totalPnl,1000)),target:1000,done:totalPnl>=1000})},
+    {id:'make10k',desc:'Make $10,000 total profit',check:()=>({progress:Math.max(0,Math.min(totalPnl,10000)),target:10000,done:totalPnl>=10000})},
     {id:'trade20',desc:'Complete 20 trades',check:()=>({progress:Math.min(totalTrades,20),target:20,done:totalTrades>=20})},
-    {id:'peak50k',desc:'Reach $5,000 peak balance',check:()=>({progress:Math.max(0,Math.min(peakBalance-START_BAL,4000)),target:4000,done:peakBalance>=5000})},
+    {id:'peak50k',desc:'Reach $50,000 peak balance',check:()=>({progress:Math.max(0,Math.min(peakBalance-START_BAL,40000)),target:40000,done:peakBalance>=50000})},
     {id:'both_markets',desc:'Trade both gold and silver',check:()=>({progress:(goldTradeCount>0?1:0)+(silverTradeCount>0?1:0),target:2,done:goldTradeCount>0&&silverTradeCount>0})},
     {id:'survive5min',desc:'Survive for 5 minutes',check:()=>{let s=Math.floor((Date.now()-sessionStartTime)/1000);return{progress:Math.min(s,300),target:300,done:s>=300}}},
-    {id:'triple_up',desc:'Triple your starting balance to $3,000',check:()=>({progress:Math.max(0,Math.min(balance-START_BAL,2000)),target:2000,done:balance>=3000})},
+    {id:'triple_up',desc:'Triple your starting balance to $30,000',check:()=>({progress:Math.max(0,Math.min(balance-START_BAL,20000)),target:20000,done:balance>=30000})},
     {id:'no_loss_10',desc:'Trade 10 times with 70%+ win rate',check:()=>({progress:Math.min(totalTrades,10),target:10,done:totalTrades>=10&&totalTrades>0&&(wins/totalTrades)>=0.7})},
     {id:'ach5',desc:'Unlock 5 achievements',check:()=>({progress:Math.min(unlockedAch.size,5),target:5,done:unlockedAch.size>=5})}
   ];
@@ -511,22 +537,26 @@ function checkChallenges(){
 
 /* ===================== NEWS ===================== */
 const NEWS_ITEMS=[
-  "📈 Markets rally on strong employment data",
-  "🏦 Federal Reserve signals rate pause ahead",
-  "⚡ Geopolitical tensions boost safe-haven demand",
-  "📊 GDP growth exceeds analyst expectations",
-  "🛢️ Oil prices surge on supply concerns",
-  "💹 Asian markets close at record highs",
-  "🏛️ Treasury yields hit 5-year low",
-  "📉 Tech sector sells off amid regulation fears",
-  "🌍 Global trade volumes recover sharply",
-  "💎 Precious metals see institutional inflows",
-  "🇺🇸 Dollar weakens against major currencies",
-  "📰 Inflation data surprises to the downside",
-  "₿ Bitcoin breaks above key resistance level",
-  "₿ Institutional BTC accumulation accelerates",
-  "₿ Crypto trading volumes hit monthly highs",
-  "₿ Bitcoin miners report record hash rate"
+  "🎰 RULES: You get 3 shots at 50-100x leverage... use em wisely or get rekt 💀",
+  "⚡ 50-100x ZONE: 3 uses only — go full degen or save them for the perfect setup",
+  "🔥 25-49x ZONE: 3 uses — still enough leverage to make it or break it",
+  "📊 10-24x ZONE: 3 uses — for the 'responsible' degens (we see you)",
+  "♾️ Below 10x? Unlimited trades. Safe plays for when you're down bad",
+  "💰 START: $10,000 bag — turn it into a fortune or go broke trying. no in-between",
+  "🏆 GRADES: $20K = D, $50K = C, $100K = B, $300K = A, $1M = S-TIER LEGEND",
+  "💎 STREAK BONUS: 3 wins = 2x pts, 5 wins = 3x pts, 10 wins = 5x pts — don't choke",
+  "☠️ LIQUIDATION = full margin GONE. no refunds. this is the thunderdome",
+  "📢 SHARE your score & earn points — more points = more token rewards 🪙",
+  "🪙 BUY $GOLDRUSH TOKEN — every trade on play.fun pushes us closer to graduation 🚀",
+  "🧠 PRO TIP: use TP/SL to lock in gains. or don't. we're not your financial advisor",
+  "🔑 HOTKEYS: L = Long, S = Short, 1/2/3 = size, ESC = panic close all",
+  "🎲 ALL IN button exists for a reason. max leverage + max size = max degen",
+  "📈 Gold & Silver markets move on breaking news — watch for 🚨 alerts",
+  "🏅 30 achievements to unlock — speedrunners, diamond hands, & comeback kings welcome",
+  "⏱️ SPEED BONUS: close a trade under 10 sec = bonus points. scalpers eat here",
+  "🐋 Hit $300K = WHALE KING tier. flex on the leaderboard 👑",
+  "🔄 Game over? PLAY AGAIN instantly. the chart waits for no one",
+  "💀 Ran out of leverage? Below 10x is unlimited. grind your way back up"
 ];
 const BREAKING_EVENTS=[
   {text:"🚨 FED RATE CUT — Gold surges!",market:'fXAU',impact:0.008},
@@ -723,12 +753,12 @@ function tickPrices(){
     // Candle aggregation
     if(sessionTicks%TICKS_PER_CANDLE===1||!md.currentCandle){
       if(md.currentCandle)md.candles.push(md.currentCandle);
-      md.currentCandle={open:md.price,high:md.price,low:md.price,close:md.price,vol:Math.random()*100+50,tickStart:sessionTicks};
+      md.currentCandle={open:md.price,high:md.price,low:md.price,close:md.price,vol:0,tickStart:sessionTicks};
     } else {
       md.currentCandle.high=Math.max(md.currentCandle.high,md.price);
       md.currentCandle.low=Math.min(md.currentCandle.low,md.price);
       md.currentCandle.close=md.price;
-      md.currentCandle.vol+=Math.random()*20;
+      md.currentCandle.vol+=Math.abs(md.price-md.prevPrice)*10000+(Math.random()*5);
     }
     // Trim old candles
     if(md.candles.length>500)md.candles=md.candles.slice(-500);
@@ -779,6 +809,10 @@ function openTrade(dir){
   const dirs=new Set(positions.filter(p=>!p.settled).map(p=>p.dir));
   if(dirs.has('long')&&dirs.has('short'))unlockAch('both_sides');
   if(positions.filter(p=>!p.settled).length>=5)unlockAch('hedge_fund');
+  // Revenge trader: open within 3 sec of last close
+  if(lastTradeCloseTime>0 && (Date.now()-lastTradeCloseTime)<3000) unlockAch('revenge_trader');
+  // Full send: MAX size + 100x
+  if(lev>=100 && margin>=(margin+balance)*0.9) unlockAch('full_send');
   renderPositions();
   updateUI();
   addPts(2); // points for opening a trade
@@ -826,7 +860,7 @@ function closeTrade(posId, isLiq=false){
     unlockAch('liq_survivor');
   } else if(isWin){
     playSound('win');flashScreen('rgba(38,166,154,0.3)');
-    if(pnl > 200){
+    if(pnl > 2000){
       setTimeout(()=>showFloat('🪙 Points → Token Rewards!','#f0b90b',window.innerWidth/2,window.innerHeight/2+40), 800);
     }
   } else {
@@ -838,6 +872,7 @@ function closeTrade(posId, isLiq=false){
   if(balance>peakBalance) peakBalance=balance;
   // Comeback kid
   if(balance>=150 && tradeHistory.some(()=>balance<20)){}
+  pos._isLiq=isLiq; // tag for achievement check
   checkAchievements(pnl, pos);
   // Remove from active
   positions.splice(idx,1);
@@ -886,7 +921,7 @@ function checkPositions(){
 }
 
 function quickTrade(dir){
-  document.getElementById('inp-size').value='100';
+  document.getElementById('inp-size').value='1000';
   setLev(5);
   openTrade(dir);
 }
@@ -969,15 +1004,15 @@ function updateStreak(){
 /* ===================== COMEBACK TRACKER ===================== */
 let wasBelow20=false;
 function checkComeback(){
-  if(balance<200)wasBelow20=true;
-  if(wasBelow20&&balance>=1500)unlockAch('comeback_kid');
+  if(balance<2000)wasBelow20=true;
+  if(wasBelow20&&balance>=15000)unlockAch('comeback_kid');
 }
 
 /* ===================== TIER SYSTEM ===================== */
 function getTier(){
-  if(balance>=30000)return{name:'WHALE KING',color:'#e040fb'};
-  if(balance>=20000)return{name:'DEGEN LORD',color:'#ef5350'};
-  if(balance>=10000)return{name:'HIGHROLLER',color:'#f0b90b'};
+  if(balance>=300000)return{name:'WHALE KING',color:'#e040fb'};
+  if(balance>=200000)return{name:'DEGEN LORD',color:'#ef5350'};
+  if(balance>=100000)return{name:'HIGHROLLER',color:'#f0b90b'};
   return{name:'TRADER',color:'var(--tv-dim)'};
 }
 
@@ -1294,7 +1329,7 @@ function drawChart(){
     const x=candleOffsetX+i*candleSpace+candleSpace/2;
     const isUp=c.close>=c.open;
     const vH=(c.vol/Math.max(vMax,1))*volH;
-    ctx.fillStyle=isUp?'rgba(38,166,154,0.2)':'rgba(239,83,80,0.2)';
+    ctx.fillStyle=isUp?'rgba(38,166,154,0.35)':'rgba(239,83,80,0.35)';
     ctx.fillRect(x-candleW/2, H-bottomPad-vH, candleW, vH);
   });
 
@@ -1628,11 +1663,11 @@ function endGame(){
   positions.forEach(p=>{if(!p.settled)closeTrade(p.id)});
   // Grade
   let grade='F',gradeColor='#ef5350';
-  if(peakBalance>=100000){grade='S';gradeColor='#e040fb'}
-  else if(peakBalance>=30000){grade='A';gradeColor='#f0b90b'}
-  else if(peakBalance>=10000){grade='B';gradeColor='#26a69a'}
-  else if(peakBalance>=5000){grade='C';gradeColor='#2962ff'}
-  else if(peakBalance>=2000){grade='D';gradeColor='#ff9800'}
+  if(peakBalance>=1000000){grade='S';gradeColor='#e040fb'}
+  else if(peakBalance>=300000){grade='A';gradeColor='#f0b90b'}
+  else if(peakBalance>=100000){grade='B';gradeColor='#26a69a'}
+  else if(peakBalance>=50000){grade='C';gradeColor='#2962ff'}
+  else if(peakBalance>=20000){grade='D';gradeColor='#ff9800'}
   const elapsed=Math.floor((Date.now()-sessionStartTime)/1000);
   const mm=Math.floor(elapsed/60);const ss=elapsed%60;
   document.getElementById('go-grade').textContent=grade;
@@ -1653,7 +1688,7 @@ function shareScore(){
   const elapsed=Math.floor((Date.now()-sessionStartTime)/1000);
   const mm=Math.floor(elapsed/60);const ss=elapsed%60;
   let grade='F';
-  if(peakBalance>=100000)grade='S';else if(peakBalance>=30000)grade='A';else if(peakBalance>=10000)grade='B';else if(peakBalance>=5000)grade='C';else if(peakBalance>=2000)grade='D';
+  if(peakBalance>=1000000)grade='S';else if(peakBalance>=300000)grade='A';else if(peakBalance>=100000)grade='B';else if(peakBalance>=50000)grade='C';else if(peakBalance>=20000)grade='D';
   const text=`⛏ Gold Rush V3 | Grade: ${grade}\n💰 Peak: $${peakBalance.toFixed(2)} | P&L: ${totalPnl>=0?'+':''}$${totalPnl.toFixed(2)}\n📊 ${totalTrades} trades | ${(totalTrades>0?(wins/totalTrades*100).toFixed(0):0)}% win rate\n🏆 ${unlockedAch.size} achievements | 🔥 Best streak: ${maxWinStreak}\n⏱ ${mm}m ${ss}s`;
   navigator.clipboard.writeText(text).catch(()=>{});
   showFloat('📋 Copied!','#26a69a',window.innerWidth/2,window.innerHeight/2);
@@ -1672,9 +1707,9 @@ document.addEventListener('keydown',e=>{
   const key=e.key.toLowerCase();
   if(key==='l')openTrade('long');
   else if(key==='s')openTrade('short');
-  else if(key==='1'){document.getElementById('inp-size').value='100'}
-  else if(key==='2'){document.getElementById('inp-size').value='250'}
-  else if(key==='3'){document.getElementById('inp-size').value='500'}
+  else if(key==='1'){document.getElementById('inp-size').value='1000'}
+  else if(key==='2'){document.getElementById('inp-size').value='2500'}
+  else if(key==='3'){document.getElementById('inp-size').value='5000'}
   else if(key==='escape')closeAll();
   else if(key==='m')toggleMute();
   else if(key==='a')showPanel(3);
@@ -1812,12 +1847,13 @@ function init(){
       if(md.sparkData.length>50)md.sparkData.shift();
       if(i%TICKS_PER_CANDLE===0){
         if(md.currentCandle)md.candles.push(md.currentCandle);
-        md.currentCandle={open:p,high:p,low:p,close:p,vol:Math.random()*100+50,tickStart:-(150-i)};
+        md.currentCandle={open:p,high:p,low:p,close:p,vol:0,tickStart:-(150-i)};
       }else if(md.currentCandle){
         md.currentCandle.high=Math.max(md.currentCandle.high,p);
         md.currentCandle.low=Math.min(md.currentCandle.low,p);
         md.currentCandle.close=p;
-        md.currentCandle.vol+=Math.random()*20;
+        const prevP=i>0?md.currentCandle.open:p;
+        md.currentCandle.vol+=Math.abs(p-prevP)*10000+(Math.random()*5);
       }
     }
     md.price=p;md.prevPrice=p;
