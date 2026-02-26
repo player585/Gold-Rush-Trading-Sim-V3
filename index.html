@@ -190,9 +190,158 @@ input:focus{border-color:var(--tv-blue)}
 #help-modal h3{margin-bottom:10px;font-size:16px}
 #help-modal .row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}
 #help-modal .key{background:var(--tv-border);padding:2px 8px;border-radius:3px;font-family:var(--font-mono);font-size:11px}
+
+/* ===================== VIEW TOGGLE ===================== */
+#view-toggle{position:fixed;top:6px;right:8px;z-index:300;display:flex;align-items:center;gap:4px;background:var(--tv-panel);border:1px solid var(--tv-border);border-radius:20px;padding:2px 3px;font-family:var(--font-mono);font-size:10px;cursor:pointer;user-select:none}
+#view-toggle .vt-opt{padding:3px 8px;border-radius:16px;color:var(--tv-dim);font-weight:600;transition:all .2s;white-space:nowrap}
+#view-toggle .vt-opt.active{background:var(--tv-blue);color:#fff}
+#view-toggle .vt-opt:hover:not(.active){color:var(--tv-text)}
+/* Nudge top-bar items so they don't overlap the toggle */
+#top-bar{padding-right:140px!important}
+
+/* ===================== MOBILE MODE (class-driven) ===================== */
+html.mobile-mode,html.mobile-mode body{height:100dvh}
+html.mobile-mode #app{padding-top:0;height:100dvh}
+html.mobile-mode input[type="number"]{font-size:16px!important}
+html.mobile-mode #chart-canvas{touch-action:none}
+html.mobile-mode #top-bar{padding-right:110px!important}
+
+/* NEWS TICKER */
+html.mobile-mode #news-bar{height:22px}
+html.mobile-mode #news-bar .ticker{font-size:10px}
+
+/* TOP BAR */
+html.mobile-mode #top-bar{height:auto;padding:4px 8px;gap:4px 8px;flex-wrap:wrap;position:relative;z-index:20}
+html.mobile-mode #logo{font-size:13px;order:0}
+html.mobile-mode .market-tab{padding:2px 6px;font-size:11px;order:1}
+html.mobile-mode .market-tab canvas{display:none}
+html.mobile-mode .market-price{font-size:11px}
+html.mobile-mode .btc-coming-soon{font-size:6px;padding:1px 3px}
+html.mobile-mode #vol-badge{font-size:8px;padding:1px 5px;order:2}
+html.mobile-mode #risk-meter{width:50px;height:6px;order:3}
+html.mobile-mode #bal-area{margin-left:0;gap:6px;font-size:11px;order:4;width:100%;justify-content:center;padding:2px 0;border-top:1px solid var(--tv-border)}
+html.mobile-mode #balance-val{font-size:13px}
+html.mobile-mode #pnl-val{font-size:10px}
+html.mobile-mode #tier-badge{font-size:8px;padding:1px 6px}
+html.mobile-mode #share-btn{padding:3px 6px;font-size:9px;order:5}
+html.mobile-mode #cashout-btn{padding:3px 6px;font-size:9px;order:6}
+html.mobile-mode #buy-token-btn{padding:3px 6px;font-size:8px;order:7}
+html.mobile-mode #session-timer{font-size:10px;order:8}
+html.mobile-mode .top-btn{font-size:14px;padding:2px 4px;order:9}
+
+/* CHART */
+html.mobile-mode #chart-wrap{min-height:35vh!important;height:40vh!important}
+html.mobile-mode #ohlc-bar{font-size:9px;top:4px;left:6px}
+html.mobile-mode #ohlc-bar span{margin-right:4px}
+html.mobile-mode #chart-controls{bottom:8px;right:8px;gap:2px}
+html.mobile-mode .chart-ctrl-btn{width:24px;height:24px;font-size:12px}
+
+/* CONTROLS */
+html.mobile-mode #controls{padding:4px 8px;gap:4px}
+html.mobile-mode #controls .grp{gap:3px}
+html.mobile-mode #controls label{font-size:10px}
+html.mobile-mode #controls input{width:55px;font-size:11px;padding:3px 4px}
+html.mobile-mode #inp-size{width:70px!important;font-size:12px!important;padding:4px 6px!important}
+html.mobile-mode .ctrl-btn{padding:3px 6px;font-size:10px}
+html.mobile-mode .tf-btn{padding:2px 6px;font-size:10px}
+html.mobile-mode #btn-quick-long,html.mobile-mode #btn-quick-short{padding:3px 6px;font-size:10px}
+html.mobile-mode #btn-close-all{padding:3px 8px;font-size:10px}
+html.mobile-mode #lev-slider-wrap{gap:4px}
+html.mobile-mode #lev-slider{width:80px;height:5px}
+html.mobile-mode #lev-slider::-webkit-slider-thumb{width:14px;height:14px}
+html.mobile-mode #lev-slider::-moz-range-thumb{width:14px;height:14px}
+html.mobile-mode #lev-val{font-size:11px;min-width:28px}
+html.mobile-mode #lev-limit{font-size:9px;padding:2px 6px;gap:4px}
+
+/* TRADE BUTTONS */
+html.mobile-mode #trade-btn-row{padding:4px 8px;gap:6px}
+html.mobile-mode #btn-long,html.mobile-mode #btn-short{padding:12px 0;font-size:15px;max-width:none;border-radius:8px}
+
+/* PANEL TABS */
+html.mobile-mode #panel-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+html.mobile-mode .ptab{padding:5px 4px;font-size:11px;white-space:nowrap}
+
+/* BOTTOM PANELS */
+html.mobile-mode #bottom{height:auto;max-height:45vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+html.mobile-mode .panel-content{padding:6px 8px;font-size:11px}
+
+/* POSITIONS */
+html.mobile-mode .pos-card{padding:6px;gap:6px;font-size:10px}
+html.mobile-mode .pos-card .dir{font-size:10px;padding:2px 4px}
+html.mobile-mode .pos-card .pnl{font-size:11px}
+html.mobile-mode .pos-close{padding:6px 12px;font-size:11px;min-width:56px}
+
+/* ACHIEVEMENTS */
+html.mobile-mode .ach-item{width:100%;padding:5px;font-size:10px}
+html.mobile-mode .ach-item .ach-icon{font-size:16px}
+
+/* CHALLENGES & HISTORY */
+html.mobile-mode .challenge-item{padding:6px;font-size:11px}
+html.mobile-mode .trade-row{font-size:10px;padding:3px 0}
+
+/* GAME OVER OVERLAY */
+html.mobile-mode #game-over-overlay{padding:20px;gap:8px}
+html.mobile-mode #game-over-overlay .grade{font-size:48px}
+html.mobile-mode #game-over-overlay .stats{font-size:11px;line-height:1.8}
+html.mobile-mode #game-over-overlay button{padding:8px 16px;font-size:13px}
+html.mobile-mode #go-points-saved{font-size:11px!important}
+
+/* CASHOUT CONFIRM */
+html.mobile-mode #cashout-confirm .confirm-box{padding:16px 20px;max-width:90vw}
+html.mobile-mode #cashout-confirm .confirm-box h3{font-size:15px}
+html.mobile-mode #cashout-confirm .confirm-box p{font-size:11px}
+html.mobile-mode #cashout-confirm .confirm-btns button{padding:6px 16px;font-size:12px}
+
+/* POINTS NOTICE */
+html.mobile-mode #points-notice{bottom:4px;font-size:8px;padding:3px 10px;white-space:normal;max-width:95vw;text-align:center}
+
+/* MISC */
+html.mobile-mode #social-feed{display:none}
+html.mobile-mode #streak-overlay{font-size:32px}
+html.mobile-mode .float-text{font-size:14px}
+html.mobile-mode #breaking-overlay{padding:4px 8px;font-size:12px}
+html.mobile-mode #help-modal .inner{padding:14px;max-width:95vw}
+html.mobile-mode #help-modal h3{font-size:14px}
+html.mobile-mode #help-modal .row{font-size:11px}
+
+/* Extra small in mobile mode */
+@media(max-width:400px){
+  html.mobile-mode #top-bar{gap:3px 6px;padding:3px 6px}
+  html.mobile-mode #logo{font-size:11px}
+  html.mobile-mode .market-tab{padding:2px 4px;font-size:10px}
+  html.mobile-mode #bal-area{gap:4px;font-size:10px}
+  html.mobile-mode #balance-val{font-size:12px}
+  html.mobile-mode #share-btn,html.mobile-mode #cashout-btn{font-size:8px;padding:2px 5px}
+  html.mobile-mode #buy-token-btn{display:none}
+  html.mobile-mode #chart-wrap{min-height:30vh!important;height:35vh!important}
+  html.mobile-mode #controls{padding:3px 6px}
+  html.mobile-mode #controls input{width:48px;font-size:10px}
+  html.mobile-mode #inp-size{width:60px!important;font-size:11px!important}
+  html.mobile-mode #lev-slider{width:60px}
+  html.mobile-mode #lev-limit{font-size:8px;padding:2px 4px}
+  html.mobile-mode #btn-long,html.mobile-mode #btn-short{padding:10px 0;font-size:14px}
+  html.mobile-mode .pos-close{padding:5px 10px;font-size:10px;min-width:48px}
+}
+
+/* Landscape in mobile mode */
+@media(max-height:500px) and (orientation:landscape){
+  html.mobile-mode #chart-wrap{min-height:30vh!important;height:35vh!important}
+  html.mobile-mode #top-bar{height:auto;padding:2px 8px}
+  html.mobile-mode #news-bar{height:18px}
+  html.mobile-mode #news-bar .ticker{font-size:9px}
+  html.mobile-mode #trade-btn-row{padding:2px 8px}
+  html.mobile-mode #btn-long,html.mobile-mode #btn-short{padding:8px 0;font-size:13px}
+  html.mobile-mode #bottom{max-height:35vh}
+  html.mobile-mode #controls{padding:2px 8px}
+}
 </style>
 </head>
 <body>
+<!-- VIEW TOGGLE -->
+<div id="view-toggle">
+<div class="vt-opt" id="vt-mobile" onclick="setViewMode('mobile')">📱 Mobile</div>
+<div class="vt-opt active" id="vt-desktop" onclick="setViewMode('desktop')">🖥 Desktop</div>
+</div>
 <canvas id="particles-canvas"></canvas>
 <div id="social-feed"></div>
 <div id="app">
@@ -357,6 +506,36 @@ let ogp=null;let ogpReady=false;
 (async()=>{try{ogp=new OpenGameSDK({ui:{usePointsWidget:true,theme:'dark'}});await ogp.init({gameId:'2af56e31-231c-4ae6-aa83-78bbfca2366a'});ogpReady=true;console.log('OGP SDK initialized successfully');}catch(e){console.warn('OGP init failed',e)}})();
 function addPts(n){try{if(ogp&&ogpReady)ogp.addPoints(n)}catch(e){console.warn('addPts error',e)}}
 function endGameSDK(){try{if(ogp&&ogpReady)ogp.endGame()}catch(e){console.warn('endGame error',e)}}
+
+/* ===================== VIEW MODE TOGGLE ===================== */
+function setViewMode(mode){
+  const html=document.documentElement;
+  const mBtn=document.getElementById('vt-mobile');
+  const dBtn=document.getElementById('vt-desktop');
+  if(mode==='mobile'){
+    html.classList.add('mobile-mode');
+    mBtn.classList.add('active');
+    dBtn.classList.remove('active');
+  } else {
+    html.classList.remove('mobile-mode');
+    mBtn.classList.remove('active');
+    dBtn.classList.add('active');
+  }
+  // Resize chart after mode switch
+  const cw=document.getElementById('chart-wrap');
+  if(mode==='mobile'){
+    cw.style.height='40vh';cw.style.minHeight='180px';
+  } else {
+    cw.style.height='56vh';cw.style.minHeight='300px';
+  }
+  setTimeout(()=>{if(typeof resizeChart==='function')resizeChart()},50);
+}
+// Auto-detect: default to mobile on small screens, desktop on large
+(function(){
+  const w=window.innerWidth||screen.width;
+  if(w<=768) setViewMode('mobile');
+  else setViewMode('desktop');
+})();
 
 /* ===================== CONSTANTS ===================== */
 const START_BAL=1000;
@@ -1262,10 +1441,12 @@ window.addEventListener('mouseup',()=>{
 chartCanvas.addEventListener('touchstart',e=>{
   if(e.touches.length===1){
     isDragging=true;dragStartX=e.touches[0].clientX;dragStartOffset=chartScrollOffset;
+    e.preventDefault();
   }
-},{passive:true});
+},{passive:false});
 chartCanvas.addEventListener('touchmove',e=>{
   if(isDragging&&e.touches.length===1){
+    e.preventDefault();
     const dx=e.touches[0].clientX-dragStartX;
     const candleSpaceApprox=chartW/MAX_VISIBLE_CANDLES;
     const candleShift=Math.round(dx/candleSpaceApprox);
@@ -1274,7 +1455,7 @@ chartCanvas.addEventListener('touchmove',e=>{
     if(chartScrollOffset>0)userScrolled=true;
     else userScrolled=false;
   }
-},{passive:true});
+},{passive:false});
 chartCanvas.addEventListener('touchend',()=>{isDragging=false});
 
 // Mouse wheel zoom
@@ -1925,9 +2106,7 @@ function init(){
   renderHistory();
   renderAchievements();
   resizeChart();
-  // Set chart area height
-  const chartWrap=document.getElementById('chart-wrap');
-  chartWrap.style.height='56vh';chartWrap.style.minHeight='300px';
+  // Chart height is managed by setViewMode() — already called on load
   // Pre-warm candle data so chart looks full immediately
   for(let sym in MARKETS){
     if(MARKETS[sym].live) continue; // BTC starts from live feed, no pre-warm
