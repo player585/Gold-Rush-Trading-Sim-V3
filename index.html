@@ -41,6 +41,12 @@ input:focus{border-color:var(--tv-blue)}
 .market-tab.active{background:var(--tv-bg);border-color:var(--tv-border)}
 .market-tab:hover{background:var(--tv-bg)}
 .market-tab canvas{border-radius:2px}
+.btc-live{border:1px solid rgba(247,147,26,0.15)!important;cursor:not-allowed;opacity:0.45;position:relative;pointer-events:none}
+.btc-live .btc-name{text-decoration:line-through;text-decoration-color:#f7931a;text-decoration-thickness:2px}
+.btc-coming-soon{position:absolute;top:-2px;right:-2px;background:linear-gradient(135deg,#f7931a,#e67e00);color:#000;font-size:7px;font-weight:900;padding:1px 5px;border-radius:0 6px 0 6px;letter-spacing:0.5px;text-transform:uppercase;line-height:1.4;white-space:nowrap;z-index:2}
+.btc-lock{font-size:10px;margin-right:2px}
+.btc-live-dot{width:6px;height:6px;border-radius:50%;background:#555;animation:none}
+@keyframes btcPulse{0%,100%{opacity:1;box-shadow:0 0 4px #f7931a}50%{opacity:.4;box-shadow:0 0 8px #f7931a}}
 .market-price{font-family:var(--font-mono);font-size:13px;font-weight:700}
 #bal-area{display:flex;align-items:center;gap:10px;margin-left:auto;font-family:var(--font-mono);font-size:13px}
 #balance-val{font-weight:700;font-size:15px}
@@ -77,7 +83,7 @@ input:focus{border-color:var(--tv-blue)}
 #btn-quick-short{background:var(--tv-red);color:#fff;padding:4px 8px;font-size:11px;border-radius:3px;opacity:.8}
 #btn-close-all{background:#ff9800;color:#000;padding:4px 10px;font-size:11px;font-weight:700;border-radius:3px}
 #btn-max-size{background:var(--tv-yellow);color:#000;padding:4px 8px;font-size:11px;font-weight:700;border-radius:3px}
-#lev-limit{font-size:10px;color:var(--tv-dim)}
+#lev-limit{font-size:11px;color:var(--tv-text);white-space:nowrap;background:var(--tv-bg);border:1px solid var(--tv-border);border-radius:4px;padding:4px 10px;font-family:var(--font-mono);font-weight:600;display:inline-flex;gap:8px;letter-spacing:0.3px}
 
 /* LEVERAGE SLIDER */
 #lev-slider-wrap{display:flex;align-items:center;gap:6px}
@@ -179,6 +185,13 @@ input:focus{border-color:var(--tv-blue)}
 <canvas width="60" height="20" id="spark-fXAG"></canvas>
 <span class="market-price" id="price-fXAG">23.50</span>
 </div>
+<div class="market-tab btc-live" data-m="BTC" id="tab-BTC">
+<span class="btc-coming-soon">🔒 COMING SOON</span>
+<span class="btc-name"><span class="btc-lock">🔒</span>₿ BTC</span>
+<canvas width="60" height="20" id="spark-BTC"></canvas>
+<span class="market-price" id="price-BTC" style="color:#555">LOCKED</span>
+<span class="btc-live-dot"></span>
+</div>
 <div id="vol-badge">CALM</div>
 <div id="risk-meter"><div id="risk-fill"></div></div>
 <div id="bal-area">
@@ -226,7 +239,7 @@ input:focus{border-color:var(--tv-blue)}
 <input type="range" id="lev-slider" min="1" max="100" value="5" step="1" oninput="setLevSlider(this.value)">
 <span id="lev-val">5x</span>
 </div>
-<span id="lev-limit">⚡3/3 at 100x</span>
+<span id="lev-limit"><span style="color:#ff1744">50-100x: <b>3</b>/3</span><span style="color:#363c4e"> | </span><span style="color:#ff9800">25-49x: <b>3</b>/3</span><span style="color:#363c4e"> | </span><span style="color:#f7c948">10-24x: <b>3</b>/3</span></span>
 </div>
 <div class="grp">
 <label>TP $</label><input id="inp-tp" type="number" placeholder="—" step="0.01"/>
@@ -297,10 +310,12 @@ const START_BAL=1000;
 const TICK_MS=200;
 let TICKS_PER_CANDLE=5;
 let MAX_VISIBLE_CANDLES=55;
-const LEV_TIERS=[100,50,25,10,3]; // degrading leverage tiers
-const LEV_USES_PER_TIER=3;
-let levTierIdx=0; // current tier index
-let levTierUsed=0; // uses at current tier
+// Leverage zones: each zone has 3 uses, below 10x is unlimited
+const LEV_ZONES=[
+  {label:'50-100x', min:50, max:100, uses:0, limit:3},
+  {label:'25-49x',  min:25, max:49,  uses:0, limit:3},
+  {label:'10-24x',  min:10, max:24,  uses:0, limit:3}
+];
 
 // Chart navigation state
 let chartScrollOffset=0; // how many candles scrolled back from live edge
@@ -345,7 +360,8 @@ function chartReset(){
 }
 const MARKETS={
   fXAU:{name:'Gold',base:1920,vol:0.0008,dp:2},
-  fXAG:{name:'Silver',base:23.50,vol:0.0012,dp:2}
+  fXAG:{name:'Silver',base:23.50,vol:0.0012,dp:2},
+  BTC:{name:'Bitcoin',base:0,vol:0,dp:2,live:true}
 };
 
 /* ===================== STATE ===================== */
@@ -487,7 +503,11 @@ const NEWS_ITEMS=[
   "🌍 Global trade volumes recover sharply",
   "💎 Precious metals see institutional inflows",
   "🇺🇸 Dollar weakens against major currencies",
-  "📰 Inflation data surprises to the downside"
+  "📰 Inflation data surprises to the downside",
+  "₿ Bitcoin breaks above key resistance level",
+  "₿ Institutional BTC accumulation accelerates",
+  "₿ Crypto trading volumes hit monthly highs",
+  "₿ Bitcoin miners report record hash rate"
 ];
 const BREAKING_EVENTS=[
   {text:"🚨 FED RATE CUT — Gold surges!",market:'fXAU',impact:0.008},
@@ -501,9 +521,13 @@ const BREAKING_EVENTS=[
   {text:"🚨 TRADE DEAL SIGNED — Gold drops!",market:'fXAU',impact:-0.005},
   {text:"🚨 STIMULUS PACKAGE — Metals surge!",market:'fXAG',impact:0.009},
   {text:"🚨 CRYPTO CRASH — Gold safe haven!",market:'fXAU',impact:0.005},
-  {text:"🚨 BOND MARKET CHAOS — Silver swings!",market:'fXAG',impact:0.006}
+  {text:"🚨 BOND MARKET CHAOS — Silver swings!",market:'fXAG',impact:0.006},
+  {text:"🚨 BITCOIN ETF INFLOWS SURGE — BTC pumping!",market:'BTC',impact:0.008},
+  {text:"🚨 WHALE LIQUIDATION — BTC flash crash!",market:'BTC',impact:-0.01},
+  {text:"🚨 HALVING HYPE — BTC momentum building!",market:'BTC',impact:0.006},
+  {text:"🚨 EXCHANGE HACK FEARS — BTC dumping!",market:'BTC',impact:-0.008}
 ];
-let newsImpact={fXAU:0,fXAG:0};
+let newsImpact={fXAU:0,fXAG:0,BTC:0};
 let newsTimer=0;
 
 function initTicker(){
@@ -642,30 +666,40 @@ function tickPrices(){
   sessionTicks++;
   for(let sym in MARKETS){
     const M=MARKETS[sym], md=marketData[sym];
-    // Volatility clustering
-    const volShock=(Math.random()-.5)*0.0001;
-    md.lastVol=Math.max(0.0002, Math.min(0.003, md.lastVol+volShock));
-    let vol=md.lastVol;
-    // Random walk
-    let ret=(Math.random()-.5)*2*vol;
-    // Mean reversion
-    ret+=((M.base - md.price)/M.base)*0.0005;
-    // Jump (rare)
-    if(Math.random()<0.003) ret+=(Math.random()-.5)*vol*8;
-    // News impact
-    if(newsImpact[sym]!==0){
-      ret+=newsImpact[sym]*0.1;
-      newsImpact[sym]*=0.9;
-      if(Math.abs(newsImpact[sym])<0.0001)newsImpact[sym]=0;
+    // Skip simulated price for live markets (BTC) — price comes from WebSocket
+    if(M.live){
+      if(md.price===0) continue; // no data yet
+      // Apply news impact to live price as small % nudge
+      if(newsImpact[sym]!==0){
+        md.prevPrice=md.price;
+        md.price=md.price*(1+newsImpact[sym]*0.02);
+        newsImpact[sym]*=0.9;
+        if(Math.abs(newsImpact[sym])<0.0001)newsImpact[sym]=0;
+      }
+    } else {
+      // Simulated price for fXAU/fXAG
+      const volShock=(Math.random()-.5)*0.0001;
+      md.lastVol=Math.max(0.0002, Math.min(0.003, md.lastVol+volShock));
+      let vol=md.lastVol;
+      let ret=(Math.random()-.5)*2*vol;
+      ret+=((M.base - md.price)/M.base)*0.0005;
+      if(Math.random()<0.003) ret+=(Math.random()-.5)*vol*8;
+      if(newsImpact[sym]!==0){
+        ret+=newsImpact[sym]*0.1;
+        newsImpact[sym]*=0.9;
+        if(Math.abs(newsImpact[sym])<0.0001)newsImpact[sym]=0;
+      }
+      md.prevPrice=md.price;
+      md.price=Math.max(md.price*0.9, md.price*(1+ret));
     }
-    md.prevPrice=md.price;
-    md.price=Math.max(md.price*0.9, md.price*(1+ret));
     // Sparkline
     md.sparkData.push(md.price);
     if(md.sparkData.length>50)md.sparkData.shift();
-    // Volatility history for indicator
-    md.volHistory.push(Math.abs(ret));
-    if(md.volHistory.length>30)md.volHistory.shift();
+    // Volatility history
+    if(!M.live){
+      md.volHistory.push(Math.abs((md.price-md.prevPrice)/md.prevPrice));
+      if(md.volHistory.length>30)md.volHistory.shift();
+    }
     // Candle aggregation
     if(sessionTicks%TICKS_PER_CANDLE===1||!md.currentCandle){
       if(md.currentCandle)md.candles.push(md.currentCandle);
@@ -681,6 +715,7 @@ function tickPrices(){
   }
   // Update price displays
   for(let sym in MARKETS){
+    if(MARKETS[sym].live) continue; // BTC updated by WebSocket
     const md=marketData[sym];
     document.getElementById('price-'+sym).textContent=md.price.toFixed(MARKETS[sym].dp);
     const el=document.getElementById('price-'+sym);
@@ -703,17 +738,11 @@ function openTrade(dir){
   const margin=parseFloat(document.getElementById('inp-size').value)||10;
   if(margin<=0||margin>balance)return;
   const lev=selectedLev;
-  const maxLev=getCurrentMaxLev();
-  if(lev>maxLev)return; // shouldn't happen but safety check
-  // Track tier usage — only counts when using the current max tier leverage
-  if(lev>=maxLev){
-    levTierUsed++;
-    if(levTierUsed>=LEV_USES_PER_TIER && levTierIdx<LEV_TIERS.length-1){
-      levTierIdx++;
-      levTierUsed=0;
-    }
-    updateLevUI();
-  }
+  // Check leverage zone availability
+  const zone=LEV_ZONES.find(z=>lev>=z.min&&lev<=z.max);
+  if(zone && zone.uses>=zone.limit)return; // zone depleted
+  if(zone) zone.uses++;
+  updateLevUI();
   if(lev>5) lowLevViolated=true;
   if(lev>=100) unlockAch('degen');
   const sym=selectedMarket;
@@ -837,30 +866,41 @@ function setMaxSize(){
 }
 
 function getCurrentMaxLev(){
-  return LEV_TIERS[levTierIdx];
+  return 100; // slider always goes to 100
 }
-function getLevTierRemaining(){
-  return LEV_USES_PER_TIER-levTierUsed;
+function getLevZone(lev){
+  return LEV_ZONES.find(z=>lev>=z.min&&lev<=z.max);
+}
+function isLevBlocked(lev){
+  const z=getLevZone(lev);
+  return z && z.uses>=z.limit;
 }
 function updateLevUI(){
-  const maxLev=getCurrentMaxLev();
-  const remaining=getLevTierRemaining();
-  const slider=document.getElementById('lev-slider');
-  slider.max=maxLev;
-  if(selectedLev>maxLev) setLev(maxLev);
-  document.getElementById('lev-limit').textContent=`⚡ ${remaining}/${LEV_USES_PER_TIER} at ${maxLev}x`;
+  const el=document.getElementById('lev-limit');
+  const colors=['#ff1744','#ff9800','#f7c948']; // red-hot, orange, gold
+  const parts=LEV_ZONES.map((z,i)=>{
+    const left=z.limit-z.uses;
+    const depleted=left<=0;
+    if(depleted) return `<span style="color:#555;text-decoration:line-through;opacity:.5">${z.label}: 0</span>`;
+    return `<span style="color:${colors[i]}">${z.label}: <b>${left}</b>/${z.limit}</span>`;
+  });
+  el.innerHTML=parts.join('<span style="color:#363c4e"> | </span>');
+  if(isLevBlocked(selectedLev)){
+    let newLev=selectedLev;
+    while(newLev>1 && isLevBlocked(newLev)) newLev--;
+    setLev(newLev);
+  }
 }
 
 function setLev(l){
-  const maxLev=getCurrentMaxLev();
-  l=Math.min(l,maxLev);
+  l=Math.max(1,Math.min(l,100));
   selectedLev=l;
   document.getElementById('lev-slider').value=l;
-  document.getElementById('lev-val').textContent=l+'x';
-  // Color code: green<10, yellow<50, orange<100, red=100
+  const blocked=isLevBlocked(l);
+  document.getElementById('lev-val').textContent=l+'x'+(blocked?' ⛔':'');
   const valEl=document.getElementById('lev-val');
-  if(l>=100){valEl.style.color='#ff1744'}
-  else if(l>=50){valEl.style.color='var(--tv-red)'}
+  if(blocked){valEl.style.color='#666'}
+  else if(l>=50){valEl.style.color='#ff1744'}
   else if(l>=25){valEl.style.color='#ff9800'}
   else if(l>=10){valEl.style.color='var(--tv-yellow)'}
   else{valEl.style.color='var(--tv-blue)'}
@@ -870,6 +910,7 @@ function setLevSlider(v){
 }
 
 function switchMarket(sym){
+  if(sym==='BTC') return; // BTC locked — coming soon
   selectedMarket=sym;
   document.querySelectorAll('.market-tab').forEach(t=>t.classList.toggle('active',t.dataset.m===sym));
 }
@@ -975,6 +1016,7 @@ function updateUI(){
   // Sparklines
   drawSparkline('fXAU');
   drawSparkline('fXAG');
+  drawSparkline('BTC');
   // Live positions PnL
   renderPositions();
   // Comeback
@@ -990,7 +1032,7 @@ function drawSparkline(sym){
   const min=Math.min(...data),max=Math.max(...data);
   const range=max-min||1;
   const isUp=data[data.length-1]>=data[0];
-  ctx.strokeStyle=isUp?'#26a69a':'#ef5350';
+  ctx.strokeStyle=sym==='BTC'?'#f7931a':(isUp?'#26a69a':'#ef5350');
   ctx.lineWidth=1.5;
   ctx.beginPath();
   data.forEach((v,i)=>{
@@ -1609,10 +1651,62 @@ document.addEventListener('keydown',e=>{
 function showHelp(){document.getElementById('help-modal').style.display='flex'}
 function hideHelp(){document.getElementById('help-modal').style.display='none'}
 
+/* ===================== LIVE BTC FEED ===================== */
+let btcFeedActive=false;
+function updateBTCDisplay(){
+  const md=marketData['BTC'];
+  if(md.price===0)return;
+  const el=document.getElementById('price-BTC');
+  el.textContent='$'+md.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if(md.prevPrice>0){
+    el.style.color=md.price>=md.prevPrice?'#26a69a':'#ef5350';
+    el.style.textShadow=md.price>=md.prevPrice?'0 0 8px rgba(38,166,154,.6)':'0 0 8px rgba(239,83,80,.6)';
+    setTimeout(()=>{el.style.textShadow='none'},300);
+  } else {
+    el.style.color='#f7931a';
+  }
+}
+function fetchBTCCoinbase(){
+  const md=marketData['BTC'];
+  fetch('https://api.coinbase.com/v2/prices/BTC-USD/spot')
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.data&&d.data.amount){
+        md.prevPrice=md.price;
+        md.price=parseFloat(d.data.amount);
+        updateBTCDisplay();
+        btcFeedActive=true;
+      }
+    }).catch(()=>{
+      // Coinbase failed, try CoinGecko
+      fetchBTCGecko();
+    });
+}
+function fetchBTCGecko(){
+  const md=marketData['BTC'];
+  fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd')
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.bitcoin&&d.bitcoin.usd){
+        md.prevPrice=md.price;
+        md.price=d.bitcoin.usd;
+        updateBTCDisplay();
+        btcFeedActive=true;
+      }
+    }).catch(()=>{});
+}
+function initBTCFeed(){
+  // Fetch immediately
+  fetchBTCCoinbase();
+  // Poll every 3 seconds for near-real-time updates
+  setInterval(fetchBTCCoinbase, 3000);
+}
+
 /* ===================== INIT ===================== */
 function init(){
   initTicker();
   initChallenges();
+  // initBTCFeed(); // BTC locked — coming soon
   renderPositions();
   renderChallenges();
   renderHistory();
@@ -1623,6 +1717,7 @@ function init(){
   chartWrap.style.height='56vh';chartWrap.style.minHeight='300px';
   // Pre-warm candle data so chart looks full immediately
   for(let sym in MARKETS){
+    if(MARKETS[sym].live) continue; // BTC starts from live feed, no pre-warm
     const md=marketData[sym];
     const M=MARKETS[sym];
     let p=M.base;
