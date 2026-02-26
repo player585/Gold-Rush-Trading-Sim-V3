@@ -168,7 +168,7 @@ input:focus{border-color:var(--tv-blue)}
 #buy-token-btn{background:linear-gradient(135deg,#26a69a,#00897b);color:#fff;padding:4px 10px;font-size:10px;font-weight:800;border-radius:4px;letter-spacing:0.5px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;animation:tokenPulse 3s ease infinite;white-space:nowrap}
 @keyframes tokenPulse{0%,100%{box-shadow:0 0 4px rgba(38,166,154,0.3)}50%{box-shadow:0 0 12px rgba(38,166,154,0.6)}}
 #buy-token-btn:hover{filter:brightness(1.2);transform:scale(1.05)}
-#points-notice{position:fixed;bottom:42px;left:50%;transform:translateX(-50%);z-index:50;background:rgba(30,34,45,0.92);border:1px solid var(--tv-border);border-radius:6px;padding:4px 14px;font-size:10px;color:var(--tv-dim);font-family:var(--font-mono);text-align:center;pointer-events:none;white-space:nowrap}
+#points-notice{position:relative;z-index:50;background:var(--tv-panel);border-top:1px solid var(--tv-border);padding:6px 14px;font-size:10px;color:var(--tv-dim);font-family:var(--font-mono);text-align:center;flex-shrink:0}
 #points-notice b{color:#e040fb}
 #cashout-confirm{position:fixed;inset:0;background:rgba(0,0,0,.8);display:none;justify-content:center;align-items:center;z-index:250;font-family:var(--font-mono)}
 #cashout-confirm .confirm-box{background:var(--tv-panel);border:1px solid #e040fb;border-radius:10px;padding:24px 32px;text-align:center;max-width:340px}
@@ -262,7 +262,7 @@ html.mobile-mode #panel-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
 html.mobile-mode .ptab{padding:5px 4px;font-size:11px;white-space:nowrap}
 
 /* BOTTOM PANELS */
-html.mobile-mode #bottom{height:auto;max-height:45vh;overflow-y:auto;-webkit-overflow-scrolling:touch;margin-bottom:50px}
+html.mobile-mode #bottom{height:auto;max-height:45vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 html.mobile-mode .panel-content{padding:6px 8px;font-size:11px}
 
 /* POSITIONS */
@@ -293,7 +293,7 @@ html.mobile-mode #cashout-confirm .confirm-box p{font-size:11px}
 html.mobile-mode #cashout-confirm .confirm-btns button{padding:6px 16px;font-size:12px}
 
 /* POINTS NOTICE */
-html.mobile-mode #points-notice{bottom:56px;font-size:12px;padding:6px 14px;white-space:normal;max-width:95vw;text-align:center;line-height:1.5;border-radius:8px;background:rgba(30,34,45,0.95);border:1px solid #e040fb33}
+html.mobile-mode #points-notice{font-size:12px;padding:10px 14px;line-height:1.5;border-top:1px solid #e040fb33}
 
 /* MISC */
 html.mobile-mode #social-feed{display:none}
@@ -451,6 +451,10 @@ html.mobile-mode #help-modal .row{font-size:11px}
 </div>
 </div>
 
+<!-- POINTS NOTICE (inside #app, at the bottom) -->
+<div id="points-notice">⚡ Points save to leaderboard when you <b>CASHOUT</b> or go <b>BROKE</b> — end your round to lock in points!</div>
+</div>
+
 <!-- OVERLAYS -->
 <div id="screen-flash"></div>
 <div id="float-container"></div>
@@ -479,9 +483,6 @@ html.mobile-mode #help-modal .row{font-size:11px}
 </div>
 </div>
 </div>
-
-<!-- POINTS NOTICE -->
-<div id="points-notice">⚡ Points save to leaderboard when you <b>CASHOUT</b> or go <b>BROKE</b> — end your round to lock in points!</div>
 <div id="help-modal" onclick="hideHelp()">
 <div class="inner" onclick="event.stopPropagation()">
 <h3>⌨️ Keyboard Shortcuts</h3>
